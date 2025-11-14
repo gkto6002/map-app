@@ -1,5 +1,6 @@
 // app/map/page.tsx
 import MapView from "../components/MapView";
+import PostButton from "../components/PostButton";
 
 export default function MapPage() {
   return (
@@ -9,6 +10,7 @@ export default function MapPage() {
         地図をクリックするとマーカーが立ち、コンソールに緯度経度が出ます。
       </p>
       <MapView />
+      <PostButton />
     </main>
   );
 }
