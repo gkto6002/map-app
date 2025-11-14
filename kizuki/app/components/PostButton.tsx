@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import PostModal from "./PostModal";
 
-export default function PostButton({ onSubmit }: { onSubmit?: (data: unknown) => void }) {
+export default function PostButton({ userId, onSubmit }: { userId?: string; onSubmit?: (data: unknown) => void }) {
   const [open, setOpen] = useState(false);
   const [showHint, setShowHint] = useState(false);
 
@@ -44,7 +44,7 @@ export default function PostButton({ onSubmit }: { onSubmit?: (data: unknown) =>
         </button>
       </div>
 
-      <PostModal open={open} onClose={() => setOpen(false)} onSubmit={onSubmit} />
+      <PostModal open={open} onClose={() => setOpen(false)} onSubmit={onSubmit} userId={userId} />
     </>
   );
 }

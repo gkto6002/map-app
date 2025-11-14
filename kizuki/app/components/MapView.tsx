@@ -94,33 +94,42 @@ export default function MapView() {
     };
     window.addEventListener("post-mode-enable", enableHandler as EventListener);
 
-    // use local dummy spots (route.ts may be changing) so dev UI remains stable
-    const dummySpots: Spot[] = [
-      {
-        id: "1",
-        title: "サンプルスポット A",
-        description: "ここはサンプルの説明です。",
-        lat: 35.6595,
-        lng: 139.7004,
-        image_url: "https://images.unsplash.com/photo-1548142813-c348350df52b?auto=format&fit=crop&w=800&q=80",
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: "2",
-        title: "サンプルスポット B",
-        description: "もう一つのサンプルスポットです。",
-        lat: 35.6580,
-        lng: 139.7010,
-        image_url: "https://images.unsplash.com/photo-1560769629-975ec94e6a86?auto=format&fit=crop&w=800&q=80",
-        created_at: new Date().toISOString(),
-      },
-    ];
+    // fetch spots from API and render markers (expects API to return array like: { id, title, body, latitude, longitude, created_at })
+    const fetchAndRender = async () => {
+      try {
+        const res = await fetch("/api/spots");
+        if (!res.ok) throw new Error(`fetch spots failed: ${res.status}`);
+        const data = await res.json();
+        const items = Array.isArray(data) ? data : data.data ?? [];
 
-    // clear existing markers
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current = [];
+        // map API shape to local Spot type
+        const itemsArr = items as unknown as Array<Record<string, unknown>>;
+        const spots: Spot[] = itemsArr
+          .map((s) => {
+            const idVal = s["id"];
+            const titleVal = s["title"] ?? s["name"] ?? "";
+            const descriptionVal = (s["body"] ?? s["description"]) as string | null | undefined;
+            const latVal = Number(s["latitude"] ?? s["lat"]);
+            const lngVal = Number(s["longitude"] ?? s["lng"]);
+            const imageUrlVal = (s["image_url"] ?? null) as string | null;
+            const createdAtVal = (s["created_at"] ?? null) as string | null;
+            return {
+              id: String(idVal),
+              title: String(titleVal),
+              description: descriptionVal ?? null,
+              lat: latVal,
+              lng: lngVal,
+              image_url: imageUrlVal,
+              created_at: createdAtVal ?? undefined,
+            } as Spot;
+          })
+          .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
 
-    dummySpots.forEach((spot: Spot) => {
+        // clear existing markers
+        markersRef.current.forEach((m) => m.remove());
+        markersRef.current = [];
+
+        spots.forEach((spot: Spot) => {
           const dotSize = 14;
           const dot = document.createElement("div");
           dot.style.width = `${dotSize}px`;
@@ -184,9 +193,20 @@ export default function MapView() {
 
           markersRef.current.push(dotMarker);
       });
+      } catch (err) {
+        console.error("load spots failed", err);
+      }
+    };
+
+  fetchAndRender();
+
+  // allow other parts of the UI to request a refresh after changes
+  const refreshHandler = () => fetchAndRender();
+  window.addEventListener("spots-updated", refreshHandler as EventListener);
 
     return () => {
       window.removeEventListener("post-mode-enable", enableHandler as EventListener);
+      window.removeEventListener("spots-updated", fetchAndRender as EventListener);
       map.off("click", onMapClick);
       // remove spot markers
       markersRef.current.forEach((m) => m.remove());

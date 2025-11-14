@@ -15,11 +15,15 @@ export default function PostModal({
   open,
   onClose,
   onSubmit,
+  userId,
 }: {
   open: boolean;
   onClose: () => void;
   onSubmit?: (data: PostData) => void;
+  userId?: string;
 }) {
+  // Note: we accept an optional userId via props when rendered from a server component
+  // but keep backward compatibility by reading it from arguments if provided.
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [lat, setLat] = useState<number | undefined>(undefined);
@@ -96,7 +100,7 @@ export default function PostModal({
     }
     streamRef.current = null;
     if (videoRef.current) {
-        try {
+      try {
         videoRef.current.pause();
         videoRef.current.srcObject = null;
       } catch {
@@ -133,6 +137,16 @@ export default function PostModal({
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
+    // validate required fields
+    if (!title || !body) {
+      alert("タイトルと本文は必須です");
+      return;
+    }
+    if (typeof lat !== "number" || typeof lng !== "number") {
+      alert("地図で位置を選択してください");
+      return;
+    }
+
     const data: PostData = {
       title,
       body,
@@ -140,14 +154,46 @@ export default function PostModal({
       lng,
       image: imageFile,
     };
-    if (onSubmit) onSubmit(data);
-    else console.log("Post submit (UI only):", data);
-    // UI only: フォームをクリアして閉じる
-    setTitle("");
-    setBody("");
-    setImageFile(null);
-    setPreviewUrl(null);
-    onClose();
+
+    (async () => {
+      try {
+        const payload: Record<string, unknown> = { title: data.title, body: data.body, latitude: data.lat, longitude: data.lng };
+        if (userId) payload.user_id = userId;
+
+        const res = await fetch("/api/spots", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          console.error("post /api/spots failed", err);
+          alert("投稿に失敗しました");
+          return;
+        }
+
+        // success -> notify map to refresh spots
+        try {
+          window.dispatchEvent(new CustomEvent("spots-updated"));
+        } catch {
+          // noop
+        }
+
+        if (onSubmit) onSubmit(data);
+      } catch (err) {
+        console.error("post submit error", err);
+        alert("投稿に失敗しました");
+        return;
+      } finally {
+        // clear UI and close
+        setTitle("");
+        setBody("");
+        setImageFile(null);
+        setPreviewUrl(null);
+        onClose();
+      }
+    })();
   };
 
   return (
