@@ -17,6 +17,20 @@ export default async function HomePage() {
       {user ? (
         <div>
           <p>ログイン中: {user.email}</p>
+
+          {/* ログアウト用フォーム（/auth/logout に POST） */}
+          <form
+            action="/auth/logout"
+            method="post"
+            style={{ marginTop: '1rem' }}
+          >
+            <button
+              type="submit"
+              className="px-4 py-2 border rounded"
+            >
+              ログアウト
+            </button>
+          </form>
         </div>
       ) : (
         <div>
