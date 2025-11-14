@@ -3,142 +3,75 @@
 
 import { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css"; // CSSのインポートもお忘れなく
-import { dummyPosts } from "../utils/dummyPosts";
+import "mapbox-gl/dist/mapbox-gl.css";
 
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
+mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN!;
 
-export default function MapView() {
+type MapViewProps = {
+  onLocationSelect?: (lng: number, lat: number) => void;
+};
+
+export default function MapView({ onLocationSelect }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const postMarkerRef = useRef<mapboxgl.Marker | null>(null);
 
   useEffect(() => {
-    if (!mapContainerRef.current) return;
-    if (!mapboxgl.accessToken) {
-      console.error("Mapbox access token is not set");
-      return;
-    }
+    if (!mapContainerRef.current || mapRef.current) return;
 
-    // マップの二重初期化を防ぐ
-    if (mapRef.current) return;
-
-    const map = new mapboxgl.Map({
+    // デフォルトは東京駅あたり
+    mapRef.current = new mapboxgl.Map({
       container: mapContainerRef.current,
       style: "mapbox://styles/mapbox/streets-v12",
-      center: [139.7004, 35.6595],
-      zoom: 15,
+      center: [139.7671, 35.6812],
+      zoom: 13,
     });
 
-    mapRef.current = map;
+    // 現在地付近に飛ばす
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lng = pos.coords.longitude;
+          const lat = pos.coords.latitude;
 
-    // マーカーの生成ループ
-    dummyPosts.forEach((post) => {
-  // --- マーカー要素の作成 ---
-  // 青いドット（ピン本体）を単体の Marker 要素として作り、
-  // これを緯度経度に直接紐づけることで "dot が座標を示す" ようにする。
-  const dotSize = 14; // サイズを変数化
-  const dot = document.createElement("div");
-  dot.style.width = `${dotSize}px`;
-  dot.style.height = `${dotSize}px`;
-  dot.style.borderRadius = "999px";
-  dot.style.backgroundColor = "#2563eb";
-  dot.style.border = "2px solid white";
-  dot.style.boxShadow = "0 0 4px rgba(0,0,0,0.4)";
-  dot.style.boxSizing = "border-box";
+          // 現在地マーカー
+          new mapboxgl.Marker({ color: "#1d4ed8" })
+            .setLngLat([lng, lat])
+            .setPopup(new mapboxgl.Popup().setText("現在地"))
+            .addTo(mapRef.current!);
 
-  // ラベル要素は別マーカーとして同じ座標に配置し、右側にオフセットする
-  const label = document.createElement("div");
-  label.textContent = post.title;
-  label.style.fontSize = "11px";
-  label.style.padding = "2px 6px";
-  label.style.borderRadius = "999px";
-  label.style.backgroundColor = "rgba(255,255,255,0.9)";
-  label.style.boxShadow = "0 0 4px rgba(0,0,0,0.3)";
-  label.style.whiteSpace = "nowrap";
-  label.style.maxWidth = "160px";
-  label.style.textOverflow = "ellipsis";
-  label.style.overflow = "hidden";
-  label.style.color = "#000";
-  label.style.display = "inline-block";
-  label.style.boxSizing = "border-box";
-  // ラベルはクリック可能にして、クリック時にドットのポップアップを開くようにする
-  label.style.pointerEvents = "auto";
-  label.style.cursor = "pointer";
+          mapRef.current?.flyTo({ center: [lng, lat], zoom: 14 });
+        },
+        () => {
+          // 失敗したらデフォルトのまま
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    }
 
-      // --- ポップアップの作成 ---
-      const imageBlock = post.imageUrl
-        ? `
-          <div style="margin-bottom: 6px;">
-            <img
-              src="${post.imageUrl}"
-              alt="${post.title}"
-              style="
-                width: 100%;
-                max-height: 160px;
-                object-fit: cover;
-                border-radius: 8px;
-              "
-            />
-          </div>
-        `
-        : "";
+    // クリックした場所に投稿用ピンを立てる
+    mapRef.current.on("click", (e) => {
+      const lng = e.lngLat.lng;
+      const lat = e.lngLat.lat;
 
-      const popupHtml = `
-        <div style="font-size: 13px; max-width: 260px; color: #000;">
-          <div style="font-weight: 600; margin-bottom: 4px; color: #000;">
-            ${post.title}
-          </div>
-          ${imageBlock}
-          <div style="margin-bottom: 4px; color: #000;">
-            ${post.body}
-          </div>
-          <div style="font-size: 11px; color: #000;">
-            ${new Date(post.createdAt).toLocaleString("ja-JP")}
-          </div>
-        </div>
-      `;
+      // 以前のピンがあれば消す
+      if (postMarkerRef.current) {
+        postMarkerRef.current.remove();
+      }
 
-      const popup = new mapboxgl.Popup({ offset: 20 }).setHTML(popupHtml);
+      postMarkerRef.current = new mapboxgl.Marker({ color: "#ef4444" })
+        .setLngLat([lng, lat])
+        .addTo(mapRef.current!);
 
-      // --- ドットを座標に固定 ---
-      const dotMarker = new mapboxgl.Marker({ element: dot, anchor: "center" })
-        .setLngLat([post.lng, post.lat])
-        .setPopup(popup)
-        .addTo(map);
-
-      // --- ラベルは同じ座標に置き、ドットの右側にピクセルオフセットする ---
-      // オフセットはドット半分 + マージン程度
-      const labelOffsetX = Math.round(dotSize / 2) + 8; // 8px マージン
-      new mapboxgl.Marker({ element: label, anchor: "left" })
-        .setLngLat([post.lng, post.lat])
-        .setOffset([labelOffsetX, 0])
-        .addTo(map);
-
-      // ラベルをクリックしたらドットの Popup を開く
-      label.addEventListener("click", (e) => {
-        e.stopPropagation();
-        try {
-          const p = dotMarker.getPopup?.();
-          if (p) p.addTo(map);
-        } catch {
-          // noop
-        }
-      });
+      // 親に位置を返す（PostModal に渡す用）
+      onLocationSelect?.(lng, lat);
     });
 
-    // クリーンアップ関数
     return () => {
-      map.remove();
+      mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [onLocationSelect]);
 
-  return (
-    <div className="w-full h-[80vh]">
-      <div
-        ref={mapContainerRef}
-        className="w-full h-full rounded-lg overflow-hidden"
-      />
-    </div>
-  );
+  return <div ref={mapContainerRef} className="w-full h-[60vh] rounded-lg" />;
 }

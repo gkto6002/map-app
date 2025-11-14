@@ -53,3 +53,5 @@
 | size_bytes   | bigint    | not null                                     | ファイルサイズ（bytes）                          |
 | sort_order   | int       | default 0                                    | 並び順（0 がメイン画像）                         |
 | created_at   | timestamptz | default now()                              | 作成日時                                         |
+
+
