@@ -8,7 +8,7 @@ export async function createClient() {
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         /**
@@ -25,14 +25,14 @@ export async function createClient() {
          * （auth の途中で Supabase が最新のセッション Cookie を投げてくる）
          */
         setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
-            });
-          } catch (e) {
-            // ルートハンドラ以外で呼ばれた場合など、書き込み不可なとき用の保険
-            console.warn('setAll cookies failed', e);
-          }
+          // try {
+          //   cookiesToSet.forEach(({ name, value, options }) => {
+          //     cookieStore.set(name, value, options);
+          //   });
+          // } catch (e) {
+          //   // ルートハンドラ以外で呼ばれた場合など、書き込み不可なとき用の保険
+          //   console.warn('setAll cookies failed', e);
+          // }
         },
       },
     }
