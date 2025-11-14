@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { createPostApi } from "@/app/lib/postsClient"; // ★ 追加
 
 type PostData = {
   title: string;
@@ -29,11 +30,9 @@ export default function PostModal({
   const [cameraActive, setCameraActive] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  // loadingLocation は UI では使わないので省略
 
   useEffect(() => {
     if (!open) return;
-    // モーダルが開いたら現在地を自動取得する
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -93,7 +92,7 @@ export default function PostModal({
     }
     streamRef.current = null;
     if (videoRef.current) {
-        try {
+      try {
         videoRef.current.pause();
         videoRef.current.srcObject = null;
       } catch {
@@ -115,21 +114,28 @@ export default function PostModal({
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, w, h);
     return new Promise<void>((resolve) => {
-      canvas.toBlob((blob) => {
-        if (!blob) return resolve();
-        const file = new File([blob], `photo-${Date.now()}.jpg`, { type: blob.type });
-        setImageFile(file);
-        const url = URL.createObjectURL(blob);
-        setPreviewUrl(url);
-        // カメラは撮影後に停止する（必要なら停止せず続ける）
-        stopCamera();
-        resolve();
-      }, "image/jpeg", 0.92);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return resolve();
+          const file = new File([blob], `photo-${Date.now()}.jpg`, {
+            type: blob.type,
+          });
+          setImageFile(file);
+          const url = URL.createObjectURL(blob);
+          setPreviewUrl(url);
+          stopCamera();
+          resolve();
+        },
+        "image/jpeg",
+        0.92
+      );
     });
   };
 
-  const handleSubmit = (e?: React.FormEvent) => {
+  // ★ ここだけロジックを変更（UIはそのまま）
+  const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
+
     const data: PostData = {
       title,
       body,
@@ -137,14 +143,37 @@ export default function PostModal({
       lng,
       image: imageFile,
     };
-    if (onSubmit) onSubmit(data);
-    else console.log("Post submit (UI only):", data);
-    // UI only: フォームをクリアして閉じる
-    setTitle("");
-    setBody("");
-    setImageFile(null);
-    setPreviewUrl(null);
-    onClose();
+
+    try {
+      if (onSubmit) {
+        // 親から onSubmit が渡されている場合は、そちらに任せる
+        onSubmit(data);
+      } else {
+        // デフォルト動作：API に直接 POST
+        if (lat == null || lng == null) {
+          alert("位置情報が取得できていません。もう一度お試しください。");
+          return;
+        }
+
+        await createPostApi({
+          title,
+          body,
+          latitude: lat,
+          longitude: lng,
+          // 画像はここではまだ送っていない（あとで Storage 連携）
+        });
+      }
+
+      // 成功したらフォームをリセットして閉じる
+      setTitle("");
+      setBody("");
+      setImageFile(null);
+      setPreviewUrl(null);
+      onClose();
+    } catch (err) {
+      console.error(err);
+      alert("投稿に失敗しました");
+    }
   };
 
   return (
@@ -206,8 +235,6 @@ export default function PostModal({
               <button
                 type="button"
                 onClick={() => {
-                  // スマホではこの input に capture 属性を付けても良いが、
-                  // getUserMedia ベースの撮影 UI を提供する
                   startCamera();
                 }}
                 className="px-3 py-1 bg-gray-100 rounded"
@@ -306,7 +333,10 @@ export default function PostModal({
             >
               キャンセル
             </button>
-            <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white">
+            <button
+              type="submit"
+              className="px-4 py-2 rounded bg-blue-600 text-white"
+            >
               投稿する
             </button>
           </div>

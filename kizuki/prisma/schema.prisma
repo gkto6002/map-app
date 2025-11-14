@@ -1,32 +1,49 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  // output   = "../app/generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
-model User {
- id    Int     @id @default(autoincrement())
- email String  @unique
- name  String?
- posts Post[]
+/// 投稿
+model Post {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @db.Uuid             // ← ログイン中の auth.users.id をそのまま保存（必須）
+
+  title     String
+  body      String
+
+  latitude  Float    // 緯度
+  longitude Float    // 経度
+
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime? @db.Timestamptz(6)
+
+  images    PostImage[]
+
+  @@map("posts")
+  @@index([createdAt], map: "posts_created_at_idx")
+  @@index([latitude, longitude], map: "posts_lat_lng_idx")
 }
 
-model Post {
- id        Int     @id @default(autoincrement())
- title     String
- content   String?
- published Boolean @default(false)
- author    User    @relation(fields: [authorId], references: [id])
- authorId  Int
+/// 投稿画像（1レコード=1枚）
+model PostImage {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId    String   @db.Uuid
+
+  path      String
+  mime      String
+  width     Int
+  height    Int
+  sizeBytes BigInt   @db.BigInt
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("post_images")
+  @@index([postId, sortOrder], map: "post_images_post_id_sort_idx")
 }

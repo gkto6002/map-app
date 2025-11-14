@@ -1,7 +1,6 @@
 // app/map/page.tsx
 import MapView from "../components/MapView";
 import PostButton from "../components/PostButton";
-import SeedButton from "../components/SeedButton";
 import SpotsList from "../components/SpotsList";
 
 export default function MapPage() {
@@ -20,11 +19,6 @@ export default function MapPage() {
       {/* --- 投稿ボタン（既存） --- */}
       <PostButton />
 
-      {/* --- ダミーデータ投入 --- */}
-      <div>
-        <h2 className="text-lg font-semibold mb-2">開発用：ダミーデータ登録</h2>
-        <SeedButton />
-      </div>
 
       {/* --- Supabase から取得したスポット一覧 --- */}
       <div>
