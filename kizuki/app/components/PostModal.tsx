@@ -29,23 +29,13 @@ export default function PostModal({
   const [cameraActive, setCameraActive] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   // loadingLocation は UI では使わないので省略
 
   useEffect(() => {
     if (!open) return;
-    // モーダルが開いたら現在地を自動取得する
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setLat(pos.coords.latitude);
-          setLng(pos.coords.longitude);
-        },
-        () => {
-          /* noop */
-        },
-        { enableHighAccuracy: true, timeout: 5000 }
-      );
-    }
+    // NOTE: 位置情報は地図で選択するワークフローに変更したため
+    // 自動で現在地を取得する処理は削除しました。
   }, [open]);
 
   useEffect(() => {
@@ -60,6 +50,19 @@ export default function PostModal({
       URL.revokeObjectURL(url);
     };
   }, [imageFile]);
+
+  // map 上で選択された位置を受け取る
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ lat: number; lng: number }>).detail;
+      if (detail && typeof detail.lat === "number" && typeof detail.lng === "number") {
+        setLat(detail.lat);
+        setLng(detail.lng);
+      }
+    };
+    window.addEventListener("post-location-selected", handler as EventListener);
+    return () => window.removeEventListener("post-location-selected", handler as EventListener);
+  }, []);
 
   if (!open) return null;
 
@@ -199,10 +202,19 @@ export default function PostModal({
             <label className="block text-sm font-medium mb-1">画像（任意）</label>
             <div className="flex items-center gap-3">
               <input
+                ref={fileInputRef}
+                className="hidden"
                 type="file"
                 accept="image/*"
                 onChange={(e) => handleFile(e.target.files)}
               />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-3 py-1 bg-gray-100 rounded"
+              >
+                画像を選択
+              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -214,6 +226,36 @@ export default function PostModal({
               >
                 カメラで撮る
               </button>
+              {imageFile || previewUrl ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    // プレビュー URL があれば revoke してからクリア
+                    try {
+                      if (previewUrl) URL.revokeObjectURL(previewUrl);
+                    } catch {
+                      // noop
+                    }
+                    // カメラが起動中なら停止
+                    try {
+                      stopCamera();
+                    } catch {
+                      // noop
+                    }
+                    setImageFile(null);
+                    setPreviewUrl(null);
+                    // file input の表示されるファイル名を消す
+                    try {
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    } catch {
+                      // noop
+                    }
+                  }}
+                  className="px-3 py-1 bg-red-100 text-red-700 rounded"
+                >
+                  画像を削除
+                </button>
+              ) : null}
             </div>
 
             {cameraActive && (
@@ -262,38 +304,13 @@ export default function PostModal({
             <label className="block text-sm font-medium mb-1">位置情報</label>
             <div className="flex items-center gap-3">
               <div className="text-sm">
-                <div>緯度: {lat ?? "取得中..."}</div>
-                <div>経度: {lng ?? "取得中..."}</div>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="px-3 py-1 bg-gray-100 rounded"
-                  onClick={() => {
-                    navigator.geolocation?.getCurrentPosition(
-                      (pos) => {
-                        setLat(pos.coords.latitude);
-                        setLng(pos.coords.longitude);
-                      },
-                      () => {
-                        /* noop */
-                      },
-                      { enableHighAccuracy: true }
-                    );
-                  }}
-                >
-                  現在地を再取得
-                </button>
-                <button
-                  type="button"
-                  className="px-3 py-1 bg-gray-100 rounded"
-                  onClick={() => {
-                    setLat(undefined);
-                    setLng(undefined);
-                  }}
-                >
-                  位置を消去
-                </button>
+                <div>緯度: {lat ?? "未選択"}</div>
+                <div>経度: {lng ?? "未選択"}</div>
+                {!lat || !lng ? (
+                  <div className="text-xs text-gray-500 mt-1">
+                    地図上で投稿したい場所をタップして、位置を選択してください。
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>

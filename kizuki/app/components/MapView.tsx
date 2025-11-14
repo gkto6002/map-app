@@ -12,6 +12,7 @@ export default function MapView() {
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const postMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const postModeRef = useRef<boolean>(false);
   type Spot = {
     id: string;
     title: string;
@@ -59,30 +60,67 @@ export default function MapView() {
       );
     }
 
-    // click to place a post marker (keeps previous behavior)
-    map.on("click", (e) => {
-      const lng = e.lngLat.lng;
-      const lat = e.lngLat.lat;
+    // click to place a post marker only when post-mode is enabled
+    const onMapClick = (e: unknown) => {
+      const ev = e as { lngLat?: { lng: number; lat: number } };
+      const lng = ev.lngLat?.lng as number | undefined;
+      const lat = ev.lngLat?.lat as number | undefined;
+      if (typeof lng !== "number" || typeof lat !== "number") return;
 
+      if (!postModeRef.current) {
+        // normal interaction: ignore for post placement
+        return;
+      }
+
+      // place or move the red post marker
       if (postMarkerRef.current) postMarkerRef.current.remove();
       postMarkerRef.current = new mapboxgl.Marker({ color: "#ef4444" })
         .setLngLat([lng, lat])
         .addTo(map);
-    });
 
-    // fetch spots from API and render markers
-    const fetchAndRender = async () => {
-      try {
-        const res = await fetch("/api/spots");
-        if (!res.ok) throw new Error(`fetch spots failed: ${res.status}`);
-        const data = await res.json();
-        const spots = Array.isArray(data) ? data : data.data ?? [];
+      // dispatch a global event so the post modal / button can react
+  window.dispatchEvent(new CustomEvent("post-location-selected", { detail: { lat, lng } }));
+  // also ask UI to open the post modal (defensive: some listeners may prefer this)
+  window.dispatchEvent(new CustomEvent("open-post-modal", { detail: { lat, lng } }));
 
-        // clear existing markers
-        markersRef.current.forEach((m) => m.remove());
-        markersRef.current = [];
+      // exit post mode after one selection
+      postModeRef.current = false;
+    };
+    map.on("click", onMapClick);
 
-  spots.forEach((spot: Spot) => {
+    // listen for the global signal to enter post selection mode
+    const enableHandler = () => {
+      postModeRef.current = true;
+    };
+    window.addEventListener("post-mode-enable", enableHandler as EventListener);
+
+    // use local dummy spots (route.ts may be changing) so dev UI remains stable
+    const dummySpots: Spot[] = [
+      {
+        id: "1",
+        title: "サンプルスポット A",
+        description: "ここはサンプルの説明です。",
+        lat: 35.6595,
+        lng: 139.7004,
+        image_url: "https://images.unsplash.com/photo-1548142813-c348350df52b?auto=format&fit=crop&w=800&q=80",
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: "2",
+        title: "サンプルスポット B",
+        description: "もう一つのサンプルスポットです。",
+        lat: 35.6580,
+        lng: 139.7010,
+        image_url: "https://images.unsplash.com/photo-1560769629-975ec94e6a86?auto=format&fit=crop&w=800&q=80",
+        created_at: new Date().toISOString(),
+      },
+    ];
+
+    // clear existing markers
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
+
+    dummySpots.forEach((spot: Spot) => {
           const dotSize = 14;
           const dot = document.createElement("div");
           dot.style.width = `${dotSize}px`;
@@ -145,15 +183,11 @@ export default function MapView() {
           });
 
           markersRef.current.push(dotMarker);
-        });
-      } catch (err) {
-        console.error("load spots failed", err);
-      }
-    };
-
-    fetchAndRender();
+      });
 
     return () => {
+      window.removeEventListener("post-mode-enable", enableHandler as EventListener);
+      map.off("click", onMapClick);
       // remove spot markers
       markersRef.current.forEach((m) => m.remove());
       markersRef.current = [];
