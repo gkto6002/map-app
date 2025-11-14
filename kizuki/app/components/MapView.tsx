@@ -5,73 +5,200 @@ import { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN!;
+mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
 
-type MapViewProps = {
-  onLocationSelect?: (lng: number, lat: number) => void;
-};
-
-export default function MapView({ onLocationSelect }: MapViewProps) {
+export default function MapView() {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const postMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const postModeRef = useRef<boolean>(false);
+  type Spot = {
+    id: string;
+    title: string;
+    description?: string;
+    lat: number;
+    lng: number;
+    image_url?: string;
+    created_at?: string;
+  };
 
   useEffect(() => {
-    if (!mapContainerRef.current || mapRef.current) return;
+    if (!mapContainerRef.current) return;
+    if (!mapboxgl.accessToken) {
+      console.error("Mapbox access token is not set");
+      return;
+    }
 
-    // デフォルトは東京駅あたり
-    mapRef.current = new mapboxgl.Map({
+    if (mapRef.current) return; // already initialized
+
+    const map = new mapboxgl.Map({
       container: mapContainerRef.current,
       style: "mapbox://styles/mapbox/streets-v12",
-      center: [139.7671, 35.6812],
-      zoom: 13,
+      center: [139.7004, 35.6595],
+      zoom: 15,
     });
 
-    // 現在地付近に飛ばす
+    mapRef.current = map;
+
+    // try to center on current location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const lng = pos.coords.longitude;
           const lat = pos.coords.latitude;
-
-          // 現在地マーカー
           new mapboxgl.Marker({ color: "#1d4ed8" })
             .setLngLat([lng, lat])
             .setPopup(new mapboxgl.Popup().setText("現在地"))
-            .addTo(mapRef.current!);
-
-          mapRef.current?.flyTo({ center: [lng, lat], zoom: 14 });
+            .addTo(map);
+          map.flyTo({ center: [lng, lat], zoom: 14 });
         },
         () => {
-          // 失敗したらデフォルトのまま
+          // ignore
         },
         { enableHighAccuracy: true, timeout: 5000 }
       );
     }
 
-    // クリックした場所に投稿用ピンを立てる
-    mapRef.current.on("click", (e) => {
-      const lng = e.lngLat.lng;
-      const lat = e.lngLat.lat;
+    // click to place a post marker only when post-mode is enabled
+    const onMapClick = (e: unknown) => {
+      const ev = e as { lngLat?: { lng: number; lat: number } };
+      const lng = ev.lngLat?.lng as number | undefined;
+      const lat = ev.lngLat?.lat as number | undefined;
+      if (typeof lng !== "number" || typeof lat !== "number") return;
 
-      // 以前のピンがあれば消す
-      if (postMarkerRef.current) {
-        postMarkerRef.current.remove();
+      if (!postModeRef.current) {
+        // normal interaction: ignore for post placement
+        return;
       }
 
+      // place or move the red post marker
+      if (postMarkerRef.current) postMarkerRef.current.remove();
       postMarkerRef.current = new mapboxgl.Marker({ color: "#ef4444" })
         .setLngLat([lng, lat])
-        .addTo(mapRef.current!);
+        .addTo(map);
 
-      // 親に位置を返す（PostModal に渡す用）
-      onLocationSelect?.(lng, lat);
-    });
+      // dispatch a global event so the post modal / button can react
+  window.dispatchEvent(new CustomEvent("post-location-selected", { detail: { lat, lng } }));
+  // also ask UI to open the post modal (defensive: some listeners may prefer this)
+  window.dispatchEvent(new CustomEvent("open-post-modal", { detail: { lat, lng } }));
+
+      // exit post mode after one selection
+      postModeRef.current = false;
+    };
+    map.on("click", onMapClick);
+
+    // listen for the global signal to enter post selection mode
+    const enableHandler = () => {
+      postModeRef.current = true;
+    };
+    window.addEventListener("post-mode-enable", enableHandler as EventListener);
+
+    // use local dummy spots (route.ts may be changing) so dev UI remains stable
+    const dummySpots: Spot[] = [
+      {
+        id: "1",
+        title: "サンプルスポット A",
+        description: "ここはサンプルの説明です。",
+        lat: 35.6595,
+        lng: 139.7004,
+        image_url: "https://images.unsplash.com/photo-1548142813-c348350df52b?auto=format&fit=crop&w=800&q=80",
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: "2",
+        title: "サンプルスポット B",
+        description: "もう一つのサンプルスポットです。",
+        lat: 35.6580,
+        lng: 139.7010,
+        image_url: "https://images.unsplash.com/photo-1560769629-975ec94e6a86?auto=format&fit=crop&w=800&q=80",
+        created_at: new Date().toISOString(),
+      },
+    ];
+
+    // clear existing markers
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
+
+    dummySpots.forEach((spot: Spot) => {
+          const dotSize = 14;
+          const dot = document.createElement("div");
+          dot.style.width = `${dotSize}px`;
+          dot.style.height = `${dotSize}px`;
+          dot.style.borderRadius = "999px";
+          dot.style.backgroundColor = "#2563eb";
+          dot.style.border = "2px solid white";
+          dot.style.boxShadow = "0 0 4px rgba(0,0,0,0.4)";
+          dot.style.boxSizing = "border-box";
+
+          const label = document.createElement("div");
+          label.textContent = spot.title;
+          label.style.fontSize = "11px";
+          label.style.padding = "2px 6px";
+          label.style.borderRadius = "999px";
+          label.style.backgroundColor = "rgba(255,255,255,0.95)";
+          label.style.boxShadow = "0 0 4px rgba(0,0,0,0.2)";
+          label.style.whiteSpace = "nowrap";
+          label.style.maxWidth = "160px";
+          label.style.textOverflow = "ellipsis";
+          label.style.overflow = "hidden";
+          label.style.color = "#000";
+          label.style.pointerEvents = "auto";
+          label.style.cursor = "pointer";
+
+          const imageBlock = spot.image_url
+            ? `<div style="margin-bottom:6px"><img src="${spot.image_url}" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px"/></div>`
+            : "";
+
+          const popupHtml = `
+            <div style="font-size:13px;max-width:260px;color:#000">
+              <div style="font-weight:600;margin-bottom:4px">${spot.title}</div>
+              ${imageBlock}
+              <div style="margin-bottom:4px">${spot.description ?? ""}</div>
+              <div style="font-size:11px;color:#666">${spot.created_at ?? ""}</div>
+            </div>
+          `;
+
+          const popup = new mapboxgl.Popup({ offset: 20 }).setHTML(popupHtml);
+
+          const dotMarker = new mapboxgl.Marker({ element: dot, anchor: "center" })
+            .setLngLat([spot.lng, spot.lat])
+            .setPopup(popup)
+            .addTo(map);
+
+          const labelOffsetX = Math.round(dotSize / 2) + 8;
+          new mapboxgl.Marker({ element: label, anchor: "left" })
+            .setLngLat([spot.lng, spot.lat])
+            .setOffset([labelOffsetX, 0])
+            .addTo(map);
+
+          label.addEventListener("click", (e) => {
+            e.stopPropagation();
+            try {
+              const p = dotMarker.getPopup?.();
+              if (p) p.addTo(map);
+            } catch {
+              // noop
+            }
+          });
+
+          markersRef.current.push(dotMarker);
+      });
 
     return () => {
-      mapRef.current?.remove();
+      window.removeEventListener("post-mode-enable", enableHandler as EventListener);
+      map.off("click", onMapClick);
+      // remove spot markers
+      markersRef.current.forEach((m) => m.remove());
+      markersRef.current = [];
+      map.remove();
       mapRef.current = null;
     };
-  }, [onLocationSelect]);
+  }, []);
 
-  return <div ref={mapContainerRef} className="w-full h-[60vh] rounded-lg" />;
+  return (
+    <div className="w-full h-[80vh]">
+      <div ref={mapContainerRef} className="w-full h-full rounded-lg overflow-hidden" />
+    </div>
+  );
 }
