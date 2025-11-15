@@ -29,6 +29,11 @@ export default function PostButton({ userId, onSubmit }: { userId?: string; onSu
   return (
     <>
       <div className="fixed right-6 bottom-6 z-40 flex flex-col items-end gap-2">
+        {/* ★ 常時表示の案内（showHint と同じノリのボックス） */}
+        <div className="px-3 py-2 rounded shadow text-xs md:text-sm bg-gray-100 text-gray-700">
+          「＋」ボタンから投稿
+        </div>
+
         {showHint && (
           <div className="mb-1 px-3 py-2 bg-yellow-100 text-sm text-gray-800 rounded shadow">
             投稿したい場所を地図上でタップしてください
@@ -43,6 +48,7 @@ export default function PostButton({ userId, onSubmit }: { userId?: string; onSu
           ＋
         </button>
       </div>
+
 
       <PostModal open={open} onClose={() => setOpen(false)} onSubmit={onSubmit} userId={userId} />
     </>

@@ -1,11 +1,7 @@
 # map-app
 # 📘 Database Design
 
-本アプリは「タイトル・テキスト・画像（任意）・位置情報」を持つ投稿を  
-タイムライン風に閲覧できる地図ベースの SNS を想定しています。
 
-ユーザー認証は **Supabase Auth** に任せ、アプリ側の DB では  
-プロフィール情報と投稿・画像情報のみを管理します。
 
 ---
 
@@ -14,17 +10,11 @@
 ### profiles table  
 ユーザープロフィール（表示用）。パスワードは保持しない。
 
-| カラム名 | 型 | 制約 | 説明 |
-|---------|----|------|------|
-| user_id | uuid | PK / not null / references auth.users(id) | Supabase Auth のユーザーID |
-| display_name | text | nullable | 任意の表示名（匿名表示のため他者には公開しない） |
-| created_at | timestamptz | default now() | 作成日時 |
 
 ---
 ## Posts（投稿データ）
 
-投稿はタイトル・本文・位置情報を持つ。タイムラインは `created_at` 降順で表示。
-
+投稿はタイトル・本文・位置情報を持つ。
 ### posts table
 
 | カラム名 | 型 | 制約 | 説明 |
