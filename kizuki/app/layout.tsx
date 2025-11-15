@@ -4,7 +4,7 @@ import "./globals.css";
 import "mapbox-gl/dist/mapbox-gl.css"; // ★ 追加
 
 export const metadata: Metadata = {
-  title: "KizukiMap",
+  title: "MachiLog",
   description: "Map-based note app",
 };
 

@@ -25,7 +25,7 @@ export default async function MapPage() {
         {/* Header: prominent, sticky on desktop */}
         <header className="bg-white p-4 rounded-md shadow-sm mb-6 flex items-center justify-between gap-4 sticky top-4 z-20">
           <div>
-            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900">Kizuki マップ</h1>
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900">MachiLog マップ</h1>
             <p className="mt-1 text-sm text-gray-500">街の気づきをすばやく共有・発見するマップアプリ</p>
           </div>
 

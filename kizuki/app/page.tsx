@@ -71,7 +71,7 @@ export default async function HomePage() {
             color: '#111827',
           }}
         >
-          KizukiMap にログイン
+          MachiLog にログイン
         </h1>
 
         <p
