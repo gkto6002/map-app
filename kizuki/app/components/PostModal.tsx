@@ -278,7 +278,7 @@ export default function PostModal({
               >
                 画像を選択
               </button>
-              <button
+              {/* <button
                 type="button"
                 onClick={() => {
                   startCamera();
@@ -286,7 +286,7 @@ export default function PostModal({
                 className="px-3 py-1 bg-gray-100 rounded text-black"
               >
                 カメラで撮る
-              </button>
+              </button> */}
               {imageFile || previewUrl ? (
                 <button
                   type="button"
