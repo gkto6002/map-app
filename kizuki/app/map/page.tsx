@@ -3,6 +3,7 @@ import MapView from "../components/MapView";
 import PostButton from "../components/PostButton";
 import SeedButton from "../components/SeedButton";
 import SpotsList from "../components/SpotsList";
+import LogoutButton from "../components/LogoutButton";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 
@@ -23,11 +24,16 @@ export default async function MapPage() {
 
   return (
     <main className="min-h-screen p-4 space-y-6">
-      <div>
-        <h1 className="text-xl font-bold mb-2">Mapbox テスト</h1>
-        <p className="mb-2 text-sm text-gray-500">
-          地図をクリックするとマーカーが立ち、コンソールに緯度経度が表示されます。
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold mb-2">Mapbox テスト</h1>
+          <p className="mb-2 text-sm text-gray-500">
+            地図をクリックするとマーカーが立ち、コンソールに緯度経度が表示されます。
+          </p>
+        </div>
+        <div>
+          <LogoutButton />
+        </div>
       </div>
 
       {/* --- 地図表示 --- */}
