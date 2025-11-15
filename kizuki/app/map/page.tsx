@@ -2,7 +2,7 @@
 import MapView from "../components/MapView";
 import PostButton from "../components/PostButton";
 import SpotsList from "../components/SpotsList";
-import LogoutButton from "../components/LogoutButton";
+// import LogoutButton from "../components/LogoutButton";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 
@@ -29,9 +29,9 @@ export default async function MapPage() {
             <p className="mt-1 text-sm text-gray-500">街の気づきをすばやく共有・発見するマップアプリ</p>
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* <div className="flex items-center gap-3">
             <LogoutButton />
-          </div>
+          </div> */}
         </header>
 
         {/* Layout: on desktop show posts left, map right. On mobile show map first then posts below. */}
@@ -45,8 +45,8 @@ export default async function MapPage() {
 
           <aside className="md:col-span-1 md:order-first">
             <div className="rounded-lg bg-white p-4 shadow-sm">
-              <h2 className="text-lg font-semibold">過去の投稿一覧</h2>
-              <p className="text-sm text-gray-500 mt-1">クリックで詳細を確認できます。</p>
+              <h2 className="text-lg font-semibold text-black dark:text-black">過去の投稿一覧</h2>
+              <p className="text-sm text-gray-500 mt-1">リロードすると最新の投稿一覧が表示されます。</p>
               <div className="mt-3">
                 <SpotsList userId={userId} />
               </div>

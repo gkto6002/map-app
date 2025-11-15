@@ -22,8 +22,6 @@ export default function PostModal({
   onSubmit?: (data: PostData) => void;
   userId?: string;
 }) {
-  // Note: we accept an optional userId via props when rendered from a server component
-  // but keep backward compatibility by reading it from arguments if provided.
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [lat, setLat] = useState<number | undefined>(undefined);
@@ -34,12 +32,9 @@ export default function PostModal({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  // loadingLocation は UI では使わないので省略
 
   useEffect(() => {
     if (!open) return;
-    // NOTE: 位置情報は地図で選択するワークフローに変更したため
-    // 自動で現在地を取得する処理は削除しました。
   }, [open]);
 
   useEffect(() => {
@@ -55,7 +50,6 @@ export default function PostModal({
     };
   }, [imageFile]);
 
-  // map 上で選択された位置を受け取る
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ lat: number; lng: number }>).detail;
@@ -128,7 +122,6 @@ export default function PostModal({
         setImageFile(file);
         const url = URL.createObjectURL(blob);
         setPreviewUrl(url);
-        // カメラは撮影後に停止する（必要なら停止せず続ける）
         stopCamera();
         resolve();
       }, "image/jpeg", 0.92);
@@ -137,7 +130,6 @@ export default function PostModal({
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
-    // validate required fields
     if (!title || !body) {
       alert("タイトルと本文は必須です");
       return;
@@ -157,17 +149,14 @@ export default function PostModal({
 
     (async () => {
       try {
-        // Build FormData so the server-side route (which expects formData) works.
         const form = new FormData();
         form.append("title", String(data.title));
         form.append("body", String(data.body ?? ""));
         form.append("latitude", String(data.lat));
         form.append("longitude", String(data.lng));
 
-        // If a file was attached, include it. The server will handle storage.
         if (data.image) {
           form.append("image", data.image, (data.image as File).name);
-          // width/height optional; backend will accept 0 if not provided
           form.append("width", "0");
           form.append("height", "0");
         } else {
@@ -175,12 +164,10 @@ export default function PostModal({
           form.append("height", "0");
         }
 
-        // userId: server can also retrieve user from cookies, but keep optional prop
         if (userId) form.append("user_id", userId);
 
         const res = await fetch("/api/spots", {
           method: "POST",
-          // IMPORTANT: do NOT set the Content-Type header manually when sending FormData.
           body: form,
         });
 
@@ -191,7 +178,6 @@ export default function PostModal({
           return;
         }
 
-        // success -> notify map to refresh spots
         try {
           window.dispatchEvent(new CustomEvent("spots-updated"));
         } catch {
@@ -204,7 +190,6 @@ export default function PostModal({
         alert("投稿に失敗しました");
         return;
       } finally {
-        // clear UI and close
         setTitle("");
         setBody("");
         setImageFile(null);
@@ -231,11 +216,11 @@ export default function PostModal({
 
       <form
         onSubmit={handleSubmit}
-        className="relative bg-white rounded-lg shadow-lg w-[min(680px,92vw)] max-h-[90vh] overflow-auto p-4"
         onClick={(e) => e.stopPropagation()}
+        className="relative bg-white dark:bg-white rounded-lg shadow-lg w-[min(680px,92vw)] max-h-[90vh] overflow-auto p-4 text-black dark:text-black"
       >
         <div className="flex items-start justify-between mb-3">
-          <h2 className="text-lg font-medium">新しい投稿</h2>
+          <h2 className="text-lg font-medium text-black">新しい投稿</h2>
           <button
             type="button"
             onClick={() => {
@@ -246,7 +231,7 @@ export default function PostModal({
               }
               onClose();
             }}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-black/70 hover:text-black"
             aria-label="閉じる"
           >
             ✕
@@ -255,29 +240,29 @@ export default function PostModal({
 
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium mb-1">タイトル</label>
+            <label className="block text-sm font-medium mb-1 text-black">タイトル</label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full border rounded px-3 py-2"
+              className="w-full border rounded px-3 py-2 bg-white text-black placeholder:text-gray-400"
               placeholder="タイトルを入力"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">本文</label>
+            <label className="block text-sm font-medium mb-1 text-black">本文</label>
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              className="w-full border rounded px-3 py-2 h-28"
+              className="w-full border rounded px-3 py-2 h-28 bg-white text-black placeholder:text-gray-400"
               placeholder="メッセージを入力"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">画像（任意）</label>
+            <label className="block text-sm font-medium mb-1 text-black">画像（任意）</label>
             <div className="flex items-center gap-3">
               <input
                 ref={fileInputRef}
@@ -289,18 +274,16 @@ export default function PostModal({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="px-3 py-1 bg-gray-100 rounded"
+                className="px-3 py-1 bg-gray-100 rounded text-black"
               >
                 画像を選択
               </button>
               <button
                 type="button"
                 onClick={() => {
-                  // スマホではこの input に capture 属性を付けても良いが、
-                  // getUserMedia ベースの撮影 UI を提供する
                   startCamera();
                 }}
-                className="px-3 py-1 bg-gray-100 rounded"
+                className="px-3 py-1 bg-gray-100 rounded text-black"
               >
                 カメラで撮る
               </button>
@@ -308,13 +291,11 @@ export default function PostModal({
                 <button
                   type="button"
                   onClick={() => {
-                    // プレビュー URL があれば revoke してからクリア
                     try {
                       if (previewUrl) URL.revokeObjectURL(previewUrl);
                     } catch {
                       // noop
                     }
-                    // カメラが起動中なら停止
                     try {
                       stopCamera();
                     } catch {
@@ -322,7 +303,6 @@ export default function PostModal({
                     }
                     setImageFile(null);
                     setPreviewUrl(null);
-                    // file input の表示されるファイル名を消す
                     try {
                       if (fileInputRef.current) fileInputRef.current.value = "";
                     } catch {
@@ -357,7 +337,7 @@ export default function PostModal({
                   <button
                     type="button"
                     onClick={() => stopCamera()}
-                    className="px-3 py-1 bg-gray-100 rounded"
+                    className="px-3 py-1 bg-gray-100 rounded text-black"
                   >
                     カメラを閉じる
                   </button>
@@ -379,13 +359,13 @@ export default function PostModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">位置情報</label>
+            <label className="block text-sm font-medium mb-1 text-black">位置情報</label>
             <div className="flex items-center gap-3">
-              <div className="text-sm">
+              <div className="text-sm text-black">
                 <div>緯度: {lat ?? "未選択"}</div>
                 <div>経度: {lng ?? "未選択"}</div>
-                {!lat || !lng ? (
-                  <div className="text-xs text-gray-500 mt-1">
+                {lat == null || lng == null ? (
+                  <div className="text-xs text-gray-600 mt-1">
                     地図上で投稿したい場所をタップして、位置を選択してください。
                   </div>
                 ) : null}
@@ -404,11 +384,14 @@ export default function PostModal({
                 }
                 onClose();
               }}
-              className="px-4 py-2 rounded bg-white border"
+              className="px-4 py-2 rounded bg-white border text-black"
             >
               キャンセル
             </button>
-            <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white">
+            <button
+              type="submit"
+              className="px-4 py-2 rounded bg-blue-600 text-white"
+            >
               投稿する
             </button>
           </div>
