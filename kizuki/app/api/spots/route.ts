@@ -2,18 +2,24 @@ import { NextResponse } from 'next/server';
 // server用のクライアントをインポートします
 import { createClient } from '@/utils/supabase/server';
 
-export async function GET() {
+export async function GET(req: Request) {
   console.log('[GET /api/posts] start');
-  
-  // サーバー用クライアントを作成
+
+  // サーバー用のクライアントを作成
   const supabase = await createClient();
 
   try {
+    // allow optional filtering by user_id via query param
+    const url = new URL(req.url);
+    const userId = url.searchParams.get('user_id');
+
     // 変更点: 画像データも一緒に取得するために post_images(*) を追加
-    const { data, error } = await supabase
-      .from('posts')
-      .select('*, post_images(*)') 
-      .order('created_at', { ascending: false });
+    let query = supabase.from('posts').select('*, post_images(*)').order('created_at', { ascending: false });
+    if (userId) {
+      query = query.eq('user_id', userId) as typeof query;
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       const raw = String(error.message ?? '');

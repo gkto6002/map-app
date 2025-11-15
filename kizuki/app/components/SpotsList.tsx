@@ -7,20 +7,25 @@ type Spot = {
   id: string;
   title: string;
   description: string | null;
-  lat: number;
-  lng: number;
+  body?: string | null;
+  // API may return `latitude`/`longitude` or older `lat`/`lng` keys. Support both.
+  latitude?: number;
+  longitude?: number;
+  lat?: number;
+  lng?: number;
   image_url: string | null;
   created_at: string;
 };
 
-export default function SpotsList() {
+export default function SpotsList({ userId }: { userId?: string }) {
   const [spots, setSpots] = useState<Spot[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
       const fetchSpots = async () => {
         try {
-          const res = await fetch("/api/spots");
+          const url = userId ? `/api/spots?user_id=${encodeURIComponent(userId)}` : "/api/spots";
+          const res = await fetch(url);
           const data = await res.json();
 
           // normalize different possible response shapes without using `any`
@@ -49,7 +54,7 @@ export default function SpotsList() {
       };
 
       fetchSpots();
-    }, []);
+  }, [userId]);
 
   if (loading) return <p>読み込み中...</p>;
 
@@ -75,11 +80,19 @@ export default function SpotsList() {
           )}
           <div>
             <h2 className="font-semibold">{spot.title}</h2>
-            {spot.description && (
-              <p className="text-sm text-gray-700">{spot.description}</p>
-            )}
+            {(() => {
+              const desc = spot.description ?? spot.body ?? null;
+              return desc ? <p className="text-sm text-gray-700">{desc}</p> : null;
+            })()}
             <p className="text-xs text-gray-500 mt-1">
-              lat: {spot.lat}, lng: {spot.lng}
+              {(() => {
+                const latVal = typeof spot.latitude === "number" ? spot.latitude : spot.lat;
+                const lngVal = typeof spot.longitude === "number" ? spot.longitude : spot.lng;
+                if (typeof latVal === "number" && typeof lngVal === "number") {
+                  return `lat: ${latVal.toFixed(5)}, lng: ${lngVal.toFixed(5)}`;
+                }
+                return "位置情報なし";
+              })()}
             </p>
           </div>
         </li>
