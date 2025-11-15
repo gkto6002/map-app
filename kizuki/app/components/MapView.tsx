@@ -32,11 +32,13 @@ export default function MapView() {
 
     if (mapRef.current) return; // already initialized
 
+    // Start very zoomed out so the map feels like "space" and then fly in to current location
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
       style: "mapbox://styles/mapbox/streets-v12",
-      center: [139.7004, 35.6595],
-      zoom: 15,
+      // center somewhere neutral and very zoomed out
+      center: [0, 20],
+      zoom: 0.6,
     });
 
     mapRef.current = map;
@@ -47,11 +49,24 @@ export default function MapView() {
         (pos) => {
           const lng = pos.coords.longitude;
           const lat = pos.coords.latitude;
-          new mapboxgl.Marker({ color: "#1d4ed8" })
-            .setLngLat([lng, lat])
-            .setPopup(new mapboxgl.Popup().setText("現在地"))
-            .addTo(map);
-          map.flyTo({ center: [lng, lat], zoom: 14 });
+
+          // First stage: fly from 'space' to a regional zoom for dramatic effect
+          map.flyTo({ center: [lng, lat], zoom: 3, speed: 0.6, curve: 1.4 });
+
+          // After the first move completes, drop a marker and then zoom in further
+          map.once("moveend", () => {
+            try {
+              new mapboxgl.Marker({ color: "#1d4ed8" })
+                .setLngLat([lng, lat])
+                .setPopup(new mapboxgl.Popup().setText("現在地"))
+                .addTo(map);
+            } catch {
+              // noop
+            }
+
+            // Second stage: close in to the final zoom
+            map.flyTo({ center: [lng, lat], zoom: 14, speed: 2.0, curve: 1.3 });
+          });
         },
         () => {
           // ignore
