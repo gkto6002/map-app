@@ -56,47 +56,55 @@ export default function SpotsList({ userId }: { userId?: string }) {
       fetchSpots();
   }, [userId]);
 
-  if (loading) return <p>読み込み中...</p>;
+  if (loading) return <p className="text-sm text-gray-500">読み込み中...</p>;
 
-  if (spots.length === 0) return <p>データがありません。</p>;
+  if (spots.length === 0) return <p className="text-sm text-gray-500">データがありません。</p>;
 
   return (
-    <ul className="space-y-3">
-      {spots.map((spot) => (
-        <li
-          key={spot.id}
-          className="border rounded-lg p-3 flex gap-3 items-start"
-        >
-          {spot.image_url && (
-            <div className="w-20 h-20 relative rounded overflow-hidden">
-              <Image
-                src={spot.image_url}
-                alt={spot.title}
-                fill
-                sizes="80px"
-                className="object-cover"
-              />
-            </div>
-          )}
-          <div>
-            <h2 className="font-semibold">{spot.title}</h2>
-            {(() => {
-              const desc = spot.description ?? spot.body ?? null;
-              return desc ? <p className="text-sm text-gray-700">{desc}</p> : null;
-            })()}
-            <p className="text-xs text-gray-500 mt-1">
+    <div className="bg-white rounded-md border border-gray-100">
+      <ul className="divide-y divide-gray-100">
+        {spots.map((spot, idx) => (
+          <li key={spot.id} className="flex gap-3 items-start p-3 hover:bg-gray-50">
+            {spot.image_url ? (
+              <div className="w-20 h-20 relative flex-shrink-0 rounded-md overflow-hidden bg-gray-100">
+                <Image
+                  src={spot.image_url}
+                  alt={spot.title}
+                  fill
+                  sizes="80px"
+                  className="object-cover"
+                />
+              </div>
+            ) : (
+              <div className="w-20 h-20 flex-shrink-0 rounded-md bg-gray-50 border border-dashed border-gray-100 flex items-center justify-center text-xs text-gray-400">
+                no image
+              </div>
+            )}
+
+            <div className="flex-1 min-w-0">
+              <h3 className="font-medium text-gray-900 truncate">{spot.title}</h3>
               {(() => {
-                const latVal = typeof spot.latitude === "number" ? spot.latitude : spot.lat;
-                const lngVal = typeof spot.longitude === "number" ? spot.longitude : spot.lng;
-                if (typeof latVal === "number" && typeof lngVal === "number") {
-                  return `lat: ${latVal.toFixed(5)}, lng: ${lngVal.toFixed(5)}`;
-                }
-                return "位置情報なし";
+                const desc = spot.description ?? spot.body ?? null;
+                return desc ? <p className="text-sm text-gray-600 mt-1 line-clamp-2">{desc}</p> : null;
               })()}
-            </p>
-          </div>
-        </li>
-      ))}
-    </ul>
+
+              <div className="mt-2 flex items-center justify-between text-xs text-gray-400">
+                <div>
+                  {(() => {
+                    const latVal = typeof spot.latitude === "number" ? spot.latitude : spot.lat;
+                    const lngVal = typeof spot.longitude === "number" ? spot.longitude : spot.lng;
+                    if (typeof latVal === "number" && typeof lngVal === "number") {
+                      return `lat: ${latVal.toFixed(5)}, lng: ${lngVal.toFixed(5)}`;
+                    }
+                    return "位置情報なし";
+                  })()}
+                </div>
+                <div className="text-gray-300">#{idx + 1}</div>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

@@ -20,10 +20,10 @@ export default async function MapPage() {
   const userId = user?.id;
 
   return (
-    <main className="min-h-screen bg-gray-50 p-6">
+    <main className="min-h-screen bg-gray-50">
       <div className="mx-auto w-full max-w-7xl">
-        {/* Header */}
-        <header className="flex items-center justify-between gap-4 mb-6">
+        {/* Header: prominent, sticky on desktop */}
+        <header className="bg-white p-4 rounded-md shadow-sm mb-6 flex items-center justify-between gap-4 sticky top-4 z-20">
           <div>
             <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900">Kizuki マップ</h1>
             <p className="mt-1 text-sm text-gray-500">街の気づきをすばやく共有・発見するマップアプリ</p>
@@ -34,17 +34,19 @@ export default async function MapPage() {
           </div>
         </header>
 
-        {/* Layout: map + sidebar */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <section className="md:col-span-2">
+        {/* Layout: on desktop show posts left, map right. On mobile show map first then posts below. */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+          {/* Map comes first in DOM so mobile shows map above posts; on md+ we order it last to be on the right */}
+          <section className="md:col-span-2 md:order-last">
             <div className="rounded-lg shadow-sm bg-white overflow-hidden">
               <MapView />
             </div>
           </section>
 
-          <aside className="space-y-4">
+          <aside className="md:col-span-1 md:order-first">
             <div className="rounded-lg bg-white p-4 shadow-sm">
               <h2 className="text-lg font-semibold">過去の投稿一覧</h2>
+              <p className="text-sm text-gray-500 mt-1">クリックで詳細を確認できます。</p>
               <div className="mt-3">
                 <SpotsList userId={userId} />
               </div>
