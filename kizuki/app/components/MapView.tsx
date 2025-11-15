@@ -35,10 +35,11 @@ export default function MapView() {
     // Start very zoomed out so the map feels like "space" and then fly in to current location
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
-      style: "mapbox://styles/mapbox/streets-v12",
+      style: "mapbox://styles/gkto6002/cmhzutjfj006g01r69txhfc7x",
       // center somewhere neutral and very zoomed out
       center: [0, 20],
       zoom: 0.6,
+
     });
 
     mapRef.current = map;
