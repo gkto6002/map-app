@@ -157,13 +157,31 @@ export default function PostModal({
 
     (async () => {
       try {
-        const payload: Record<string, unknown> = { title: data.title, body: data.body, latitude: data.lat, longitude: data.lng };
-        if (userId) payload.user_id = userId;
+        // Build FormData so the server-side route (which expects formData) works.
+        const form = new FormData();
+        form.append("title", String(data.title));
+        form.append("body", String(data.body ?? ""));
+        form.append("latitude", String(data.lat));
+        form.append("longitude", String(data.lng));
+
+        // If a file was attached, include it. The server will handle storage.
+        if (data.image) {
+          form.append("image", data.image, (data.image as File).name);
+          // width/height optional; backend will accept 0 if not provided
+          form.append("width", "0");
+          form.append("height", "0");
+        } else {
+          form.append("width", "0");
+          form.append("height", "0");
+        }
+
+        // userId: server can also retrieve user from cookies, but keep optional prop
+        if (userId) form.append("user_id", userId);
 
         const res = await fetch("/api/spots", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          // IMPORTANT: do NOT set the Content-Type header manually when sending FormData.
+          body: form,
         });
 
         if (!res.ok) {
@@ -200,7 +218,14 @@ export default function PostModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
         className="absolute inset-0 bg-black/40"
-        onClick={onClose}
+        onClick={() => {
+          try {
+            window.dispatchEvent(new CustomEvent("post-cancelled"));
+          } catch {
+            // noop
+          }
+          onClose();
+        }}
         aria-hidden
       />
 
@@ -213,7 +238,14 @@ export default function PostModal({
           <h2 className="text-lg font-medium">新しい投稿</h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => {
+              try {
+                window.dispatchEvent(new CustomEvent("post-cancelled"));
+              } catch {
+                // noop
+              }
+              onClose();
+            }}
             className="text-gray-500 hover:text-gray-700"
             aria-label="閉じる"
           >
@@ -364,7 +396,14 @@ export default function PostModal({
           <div className="flex justify-end gap-2">
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => {
+                try {
+                  window.dispatchEvent(new CustomEvent("post-cancelled"));
+                } catch {
+                  // noop
+                }
+                onClose();
+              }}
               className="px-4 py-2 rounded bg-white border"
             >
               キャンセル

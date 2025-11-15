@@ -79,9 +79,9 @@ export default function MapView() {
         .addTo(map);
 
       // dispatch a global event so the post modal / button can react
-  window.dispatchEvent(new CustomEvent("post-location-selected", { detail: { lat, lng } }));
-  // also ask UI to open the post modal (defensive: some listeners may prefer this)
-  window.dispatchEvent(new CustomEvent("open-post-modal", { detail: { lat, lng } }));
+      window.dispatchEvent(new CustomEvent("post-location-selected", { detail: { lat, lng } }));
+      // also ask UI to open the post modal (defensive: some listeners may prefer this)
+      window.dispatchEvent(new CustomEvent("open-post-modal", { detail: { lat, lng } }));
 
       // exit post mode after one selection
       postModeRef.current = false;
@@ -192,21 +192,45 @@ export default function MapView() {
           });
 
           markersRef.current.push(dotMarker);
-      });
+        });
       } catch (err) {
         console.error("load spots failed", err);
       }
     };
 
-  fetchAndRender();
+    fetchAndRender();
 
-  // allow other parts of the UI to request a refresh after changes
-  const refreshHandler = () => fetchAndRender();
-  window.addEventListener("spots-updated", refreshHandler as EventListener);
+    // allow other parts of the UI to request a refresh after changes
+    const refreshHandler = () => {
+      try {
+        if (postMarkerRef.current) {
+          postMarkerRef.current.remove();
+          postMarkerRef.current = null;
+        }
+      } catch {
+        // noop
+      }
+      fetchAndRender();
+    };
+
+    const cancelHandler = () => {
+      try {
+        if (postMarkerRef.current) {
+          postMarkerRef.current.remove();
+          postMarkerRef.current = null;
+        }
+      } catch {
+        // noop
+      }
+    };
+
+    window.addEventListener("spots-updated", refreshHandler as EventListener);
+    window.addEventListener("post-cancelled", cancelHandler as EventListener);
 
     return () => {
       window.removeEventListener("post-mode-enable", enableHandler as EventListener);
-      window.removeEventListener("spots-updated", fetchAndRender as EventListener);
+      window.removeEventListener("spots-updated", refreshHandler as EventListener);
+      window.removeEventListener("post-cancelled", cancelHandler as EventListener);
       map.off("click", onMapClick);
       // remove spot markers
       markersRef.current.forEach((m) => m.remove());
