@@ -60,7 +60,7 @@ export default async function HomePage() {
             marginBottom: '1.25rem',
           }}
         >
-          K
+          M
         </div>
 
         <h1

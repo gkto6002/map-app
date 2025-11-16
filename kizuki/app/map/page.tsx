@@ -21,12 +21,16 @@ export default async function MapPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <div className="mx-auto w-full max-w-7xl">
-        {/* Header: prominent, sticky on desktop */}
-        <header className="bg-white p-4 rounded-md shadow-sm mb-6 flex items-center justify-between gap-4 sticky top-4 z-20">
+      <div className="mx-auto w-full max-w-7xl px-4 py-4">
+        {/* 追従しないヘッダー */}
+        <header className="bg-white p-4 rounded-md shadow-sm mb-4 flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900">MachiLog マップ</h1>
-            <p className="mt-1 text-sm text-gray-500">街の気づきをすばやく共有・発見するマップアプリ</p>
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900">
+              MachiLog マップ
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">
+              街の気づきをすばやく共有・発見するマップアプリ
+            </p>
           </div>
 
           {/* <div className="flex items-center gap-3">
@@ -39,14 +43,23 @@ export default async function MapPage() {
           {/* Map comes first in DOM so mobile shows map above posts; on md+ we order it last to be on the right */}
           <section className="md:col-span-2 md:order-last">
             <div className="rounded-lg shadow-sm bg-white overflow-hidden">
+              {/* ここを修正 */}
               <MapView />
             </div>
+
+            <p className="mt-2 text-xs text-gray-500 text-center md:hidden">
+              下にスクロールすると過去の投稿一覧が表示されます。
+            </p>
           </section>
 
           <aside className="md:col-span-1 md:order-first">
             <div className="rounded-lg bg-white p-4 shadow-sm">
-              <h2 className="text-lg font-semibold text-black dark:text-black">過去の投稿一覧</h2>
-              <p className="text-sm text-gray-500 mt-1">リロードすると最新の投稿一覧が表示されます。</p>
+              <h2 className="text-lg font-semibold text-black dark:text-black">
+                過去の投稿一覧
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                リロードすると最新の投稿一覧が表示されます。
+              </p>
               <div className="mt-3">
                 <SpotsList userId={userId} />
               </div>

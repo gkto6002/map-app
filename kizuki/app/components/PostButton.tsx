@@ -31,7 +31,7 @@ export default function PostButton({ userId, onSubmit }: { userId?: string; onSu
       <div className="fixed right-6 bottom-6 z-40 flex flex-col items-end gap-2">
         {/* ★ 常時表示の案内（showHint と同じノリのボックス） */}
         <div className="px-3 py-2 rounded shadow text-xs md:text-sm bg-gray-100 text-gray-700">
-          「＋」ボタンから投稿
+          新規投稿
         </div>
 
         {showHint && (

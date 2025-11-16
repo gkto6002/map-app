@@ -39,7 +39,6 @@ export default function MapView() {
       // center somewhere neutral and very zoomed out
       center: [0, 20],
       zoom: 0.6,
-
     });
 
     mapRef.current = map;
@@ -95,9 +94,13 @@ export default function MapView() {
         .addTo(map);
 
       // dispatch a global event so the post modal / button can react
-      window.dispatchEvent(new CustomEvent("post-location-selected", { detail: { lat, lng } }));
+      window.dispatchEvent(
+        new CustomEvent("post-location-selected", { detail: { lat, lng } })
+      );
       // also ask UI to open the post modal (defensive: some listeners may prefer this)
-      window.dispatchEvent(new CustomEvent("open-post-modal", { detail: { lat, lng } }));
+      window.dispatchEvent(
+        new CustomEvent("open-post-modal", { detail: { lat, lng } })
+      );
 
       // exit post mode after one selection
       postModeRef.current = false;
@@ -124,7 +127,10 @@ export default function MapView() {
           .map((s) => {
             const idVal = s["id"];
             const titleVal = s["title"] ?? s["name"] ?? "";
-            const descriptionVal = (s["body"] ?? s["description"]) as string | null | undefined;
+            const descriptionVal = (s["body"] ?? s["description"]) as
+              | string
+              | null
+              | undefined;
             const latVal = Number(s["latitude"] ?? s["lat"]);
             const lngVal = Number(s["longitude"] ?? s["lng"]);
             const imageUrlVal = (s["image_url"] ?? null) as string | null;
@@ -256,8 +262,9 @@ export default function MapView() {
     };
   }, []);
 
+  // ★ここだけ変更：モバイルは高さを削る / md以上は80vhで最大表示
   return (
-    <div className="w-full h-[80vh]">
+    <div className="w-full h-[420px] sm:h-[260px] md:h-[80vh]">
       <div ref={mapContainerRef} className="w-full h-full rounded-lg overflow-hidden" />
     </div>
   );
