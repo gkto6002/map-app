@@ -33,8 +33,11 @@ export default function PostModal({
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // ★ 追加: 送信成功時のポップアップ表示フラグ
+  // ★ 追加: 投稿成功ポップアップ
   const [showSuccess, setShowSuccess] = useState(false);
+
+  // ★ 追加: 投稿中フラグ
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -92,17 +95,13 @@ export default function PostModal({
   const stopCamera = () => {
     try {
       streamRef.current?.getTracks().forEach((t) => t.stop());
-    } catch {
-      // noop
-    }
+    } catch {}
     streamRef.current = null;
     if (videoRef.current) {
       try {
         videoRef.current.pause();
         videoRef.current.srcObject = null;
-      } catch {
-        // noop
-      }
+      } catch {}
     }
     setCameraActive(false);
   };
@@ -133,6 +132,7 @@ export default function PostModal({
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
+
     if (!title || !body) {
       alert("タイトルと本文は必須です");
       return;
@@ -141,6 +141,8 @@ export default function PostModal({
       alert("地図で位置を選択してください");
       return;
     }
+
+    setSubmitting(true); // ★投稿中に設定
 
     const data: PostData = {
       title,
@@ -183,44 +185,33 @@ export default function PostModal({
 
         try {
           window.dispatchEvent(new CustomEvent("spots-updated"));
-        } catch {
-          // noop
-        }
+        } catch {}
 
         if (onSubmit) onSubmit(data);
 
-        // ★ 追加: 成功ポップアップ表示 & フォームリセット
+        // ★ 成功ポップアップを表示する
         setShowSuccess(true);
+
+        // 入力値をリセット
         setTitle("");
         setBody("");
         setImageFile(null);
         setPreviewUrl(null);
         setLat(undefined);
         setLng(undefined);
-        try {
-          if (fileInputRef.current) fileInputRef.current.value = "";
-        } catch {
-          // noop
-        }
+        if (fileInputRef.current) fileInputRef.current.value = "";
+
       } catch (err) {
         console.error("post submit error", err);
         alert("投稿に失敗しました");
-        return;
       } finally {
-        // ★ ここではもう onClose() は呼ばない
-        //   → ポップアップの「閉じる」を押したときに閉じる
+        setSubmitting(false); // ★投稿中解除
       }
     })();
   };
 
   const handleCloseAll = () => {
-    // ポップアップを閉じて、モーダルも閉じる
     setShowSuccess(false);
-    try {
-      window.dispatchEvent(new CustomEvent("post-cancelled"));
-    } catch {
-      // noop
-    }
     onClose();
   };
 
@@ -250,6 +241,7 @@ export default function PostModal({
         </div>
 
         <div className="space-y-3">
+          {/* タイトル */}
           <div>
             <label className="block text-sm font-medium mb-1 text-black">タイトル</label>
             <input
@@ -261,6 +253,7 @@ export default function PostModal({
             />
           </div>
 
+          {/* 本文 */}
           <div>
             <label className="block text-sm font-medium mb-1 text-black">本文</label>
             <textarea
@@ -272,6 +265,7 @@ export default function PostModal({
             />
           </div>
 
+          {/* 画像 */}
           <div>
             <label className="block text-sm font-medium mb-1 text-black">画像（任意）</label>
             <div className="flex items-center gap-3">
@@ -289,36 +283,16 @@ export default function PostModal({
               >
                 画像を選択
               </button>
-              {/* <button
-                type="button"
-                onClick={() => {
-                  startCamera();
-                }}
-                className="px-3 py-1 bg-gray-100 rounded text-black"
-              >
-                カメラで撮る
-              </button> */}
+
               {imageFile || previewUrl ? (
                 <button
                   type="button"
                   onClick={() => {
-                    try {
-                      if (previewUrl) URL.revokeObjectURL(previewUrl);
-                    } catch {
-                      // noop
-                    }
-                    try {
-                      stopCamera();
-                    } catch {
-                      // noop
-                    }
+                    if (previewUrl) URL.revokeObjectURL(previewUrl);
+                    stopCamera();
                     setImageFile(null);
                     setPreviewUrl(null);
-                    try {
-                      if (fileInputRef.current) fileInputRef.current.value = "";
-                    } catch {
-                      // noop
-                    }
+                    if (fileInputRef.current) fileInputRef.current.value = "";
                   }}
                   className="px-3 py-1 bg-red-100 text-red-700 rounded"
                 >
@@ -326,35 +300,6 @@ export default function PostModal({
                 </button>
               ) : null}
             </div>
-
-            {cameraActive && (
-              <div className="mt-2">
-                <div className="relative w-full max-w-md bg-black">
-                  <video
-                    ref={videoRef}
-                    className="w-full h-auto"
-                    playsInline
-                    muted
-                  />
-                </div>
-                <div className="flex gap-2 mt-2">
-                  <button
-                    type="button"
-                    onClick={() => capturePhoto()}
-                    className="px-3 py-1 bg-blue-600 text-white rounded"
-                  >
-                    撮影
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => stopCamera()}
-                    className="px-3 py-1 bg-gray-100 rounded text-black"
-                  >
-                    カメラを閉じる
-                  </button>
-                </div>
-              </div>
-            )}
 
             {previewUrl && (
               <div className="mt-2">
@@ -369,21 +314,21 @@ export default function PostModal({
             )}
           </div>
 
+          {/* 位置情報 */}
           <div>
             <label className="block text-sm font-medium mb-1 text-black">位置情報</label>
-            <div className="flex items-center gap-3">
-              <div className="text-sm text-black">
-                <div>緯度: {lat ?? "未選択"}</div>
-                <div>経度: {lng ?? "未選択"}</div>
-                {lat == null || lng == null ? (
-                  <div className="text-xs text-gray-600 mt-1">
-                    地図上で投稿したい場所をタップして、位置を選択してください。
-                  </div>
-                ) : null}
-              </div>
+            <div className="text-sm text-black">
+              <div>緯度: {lat ?? "未選択"}</div>
+              <div>経度: {lng ?? "未選択"}</div>
+              {lat == null || lng == null ? (
+                <div className="text-xs text-gray-600 mt-1">
+                  地図上で投稿したい場所をタップして、位置を選択してください。
+                </div>
+              ) : null}
             </div>
           </div>
 
+          {/* ボタン */}
           <div className="flex justify-end gap-2">
             <button
               type="button"
@@ -392,22 +337,26 @@ export default function PostModal({
             >
               キャンセル
             </button>
+
             <button
               type="submit"
-              className="px-4 py-2 rounded bg-blue-600 text-white"
+              disabled={submitting}
+              className={`px-4 py-2 rounded text-white ${
+                submitting
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-600"
+              }`}
             >
-              投稿する
+              {submitting ? "投稿中..." : "投稿する"}
             </button>
           </div>
         </div>
 
-        {/* ★ 追加: 送信成功ポップアップ */}
+        {/* ★ 成功ポップアップ */}
         {showSuccess && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div className="rounded-lg bg-white px-5 py-4 shadow-lg w-[min(360px,80vw)]">
-              <p className="mb-4 text-sm text-gray-800">
-                投稿が完了しました。
-              </p>
+              <p className="mb-4 text-sm text-gray-800">投稿が完了しました。</p>
               <div className="flex justify-end">
                 <button
                   type="button"
