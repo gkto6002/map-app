@@ -33,10 +33,10 @@ export default function PostModal({
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // ★ 追加: 投稿成功ポップアップ
+  // 投稿成功ポップアップ
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // ★ 追加: 投稿中フラグ
+  // 投稿中フラグ
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -65,7 +65,8 @@ export default function PostModal({
       }
     };
     window.addEventListener("post-location-selected", handler as EventListener);
-    return () => window.removeEventListener("post-location-selected", handler as EventListener);
+    return () =>
+      window.removeEventListener("post-location-selected", handler as EventListener);
   }, []);
 
   if (!open) return null;
@@ -142,7 +143,7 @@ export default function PostModal({
       return;
     }
 
-    setSubmitting(true); // ★投稿中に設定
+    setSubmitting(true);
 
     const data: PostData = {
       title,
@@ -189,7 +190,7 @@ export default function PostModal({
 
         if (onSubmit) onSubmit(data);
 
-        // ★ 成功ポップアップを表示する
+        // 成功ポップアップを表示
         setShowSuccess(true);
 
         // 入力値をリセット
@@ -200,18 +201,34 @@ export default function PostModal({
         setLat(undefined);
         setLng(undefined);
         if (fileInputRef.current) fileInputRef.current.value = "";
-
       } catch (err) {
         console.error("post submit error", err);
         alert("投稿に失敗しました");
       } finally {
-        setSubmitting(false); // ★投稿中解除
+        setSubmitting(false);
       }
     })();
   };
 
+  // ★ モーダルを閉じる共通処理
   const handleCloseAll = () => {
+    // カメラが動いていたら止める
+    stopCamera();
+
+    // 成功ポップアップを閉じる
     setShowSuccess(false);
+
+    // MapView に「キャンセルされた」ことを通知 → 赤いピンを消す
+    try {
+      window.dispatchEvent(new Event("post-cancelled"));
+    } catch {}
+
+    // PostButton に「ヒントを隠して」と通知
+    try {
+      window.dispatchEvent(new Event("post-hint-hide"));
+    } catch {}
+
+    // 親側にモーダルを閉じてもらう
     onClose();
   };
 
@@ -342,9 +359,7 @@ export default function PostModal({
               type="submit"
               disabled={submitting}
               className={`px-4 py-2 rounded text-white ${
-                submitting
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-blue-600"
+                submitting ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600"
               }`}
             >
               {submitting ? "投稿中..." : "投稿する"}
@@ -352,7 +367,7 @@ export default function PostModal({
           </div>
         </div>
 
-        {/* ★ 成功ポップアップ */}
+        {/* 成功ポップアップ */}
         {showSuccess && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div className="rounded-lg bg-white px-5 py-4 shadow-lg w-[min(360px,80vw)]">

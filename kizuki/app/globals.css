@@ -24,3 +24,12 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+
+/* Mapbox ポップアップのバツボタンを大きくする */
+.mapboxgl-popup-close-button {
+  font-size: 18px !important;     /* ← 大きく */
+  padding: 6px 10px !important;   /* ← 当たり判定大きく */
+  color: #000 !important;         /* ← 黒に統一 */
+  line-height: 1 !important;
+}
