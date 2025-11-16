@@ -33,6 +33,9 @@ export default function PostModal({
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // ★ 追加: 送信成功時のポップアップ表示フラグ
+  const [showSuccess, setShowSuccess] = useState(false);
+
   useEffect(() => {
     if (!open) return;
   }, [open]);
@@ -185,32 +188,47 @@ export default function PostModal({
         }
 
         if (onSubmit) onSubmit(data);
+
+        // ★ 追加: 成功ポップアップ表示 & フォームリセット
+        setShowSuccess(true);
+        setTitle("");
+        setBody("");
+        setImageFile(null);
+        setPreviewUrl(null);
+        setLat(undefined);
+        setLng(undefined);
+        try {
+          if (fileInputRef.current) fileInputRef.current.value = "";
+        } catch {
+          // noop
+        }
       } catch (err) {
         console.error("post submit error", err);
         alert("投稿に失敗しました");
         return;
       } finally {
-        setTitle("");
-        setBody("");
-        setImageFile(null);
-        setPreviewUrl(null);
-        onClose();
+        // ★ ここではもう onClose() は呼ばない
+        //   → ポップアップの「閉じる」を押したときに閉じる
       }
     })();
+  };
+
+  const handleCloseAll = () => {
+    // ポップアップを閉じて、モーダルも閉じる
+    setShowSuccess(false);
+    try {
+      window.dispatchEvent(new CustomEvent("post-cancelled"));
+    } catch {
+      // noop
+    }
+    onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
         className="absolute inset-0 bg-black/40"
-        onClick={() => {
-          try {
-            window.dispatchEvent(new CustomEvent("post-cancelled"));
-          } catch {
-            // noop
-          }
-          onClose();
-        }}
+        onClick={handleCloseAll}
         aria-hidden
       />
 
@@ -223,14 +241,7 @@ export default function PostModal({
           <h2 className="text-lg font-medium text-black">新しい投稿</h2>
           <button
             type="button"
-            onClick={() => {
-              try {
-                window.dispatchEvent(new CustomEvent("post-cancelled"));
-              } catch {
-                // noop
-              }
-              onClose();
-            }}
+            onClick={handleCloseAll}
             className="text-black/70 hover:text-black"
             aria-label="閉じる"
           >
@@ -376,14 +387,7 @@ export default function PostModal({
           <div className="flex justify-end gap-2">
             <button
               type="button"
-              onClick={() => {
-                try {
-                  window.dispatchEvent(new CustomEvent("post-cancelled"));
-                } catch {
-                  // noop
-                }
-                onClose();
-              }}
+              onClick={handleCloseAll}
               className="px-4 py-2 rounded bg-white border text-black"
             >
               キャンセル
@@ -396,6 +400,26 @@ export default function PostModal({
             </button>
           </div>
         </div>
+
+        {/* ★ 追加: 送信成功ポップアップ */}
+        {showSuccess && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="rounded-lg bg-white px-5 py-4 shadow-lg w-[min(360px,80vw)]">
+              <p className="mb-4 text-sm text-gray-800">
+                投稿が完了しました。
+              </p>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  className="px-4 py-1 rounded border text-sm text-gray-800 hover:bg-gray-100"
+                  onClick={handleCloseAll}
+                >
+                  閉じる
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </form>
     </div>
   );
